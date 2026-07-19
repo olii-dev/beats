@@ -479,8 +479,6 @@ svg {
   }
 }
 
-  50% { transform: scaleY(1); }
-}
 
 @media (hover: none) {
   .row:hover,
