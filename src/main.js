@@ -10,6 +10,12 @@ const catalog = [
     tag: 'instrumental',
     src: `${base}beats/beat-1.m4a`,
   },
+  {
+    id: 2,
+    title: 'haze',
+    tag: 'instrumental',
+    src: `${base}beats/beat-2.m4a`,
+  },
 ]
 
 let activeId = null
