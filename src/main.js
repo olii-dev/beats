@@ -49,7 +49,6 @@ let progressEl
 let progressFill
 let progressKnob
 let eqEl
-let coverTitle
 
 function formatTime(sec) {
   if (!Number.isFinite(sec)) return '0:00'
@@ -80,8 +79,8 @@ function mount() {
       <main class="shell" id="listen">
         <section class="hero" aria-label="Now playing">
           <div class="cover" aria-hidden="true">
+            <img class="cover-art" src="${base}covers/cover.png" alt="" />
             <span class="eq" data-eq>${bars}</span>
-            <span class="cover-title" data-cover-title>drift</span>
           </div>
 
           <div class="hero-copy">
@@ -136,7 +135,6 @@ function mount() {
   progressFill = app.querySelector('[data-fill]')
   progressKnob = app.querySelector('[data-knob]')
   eqEl = app.querySelector('[data-eq]')
-  coverTitle = app.querySelector('[data-cover-title]')
   eqBars = [...eqEl.querySelectorAll('i')]
 
   bindShell()
@@ -252,7 +250,6 @@ function selectBeat(id, { autoplay = true } = {}) {
   activeId = id
   titleEl.textContent = beat.title
   tagEl.textContent = beat.tag
-  coverTitle.textContent = beat.title
   playBtn.disabled = false
 
   if (changing) {
