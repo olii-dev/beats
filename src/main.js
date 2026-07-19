@@ -1,11 +1,12 @@
 import './style.css'
 
 const base = import.meta.env.BASE_URL
+const BAR_COUNT = 24
 
 const catalog = [
   {
     id: 1,
-    title: 'beat 1',
+    title: 'drift',
     tag: 'instrumental',
     src: `${base}beats/beat-1.m4a`,
   },
@@ -13,9 +14,16 @@ const catalog = [
 
 let activeId = null
 let isPlaying = false
+let audioCtx = null
+let analyser = null
+let freqData = null
+let eqBars = []
+let rafId = 0
+let audioGraphReady = false
 
 const audio = new Audio()
 audio.preload = 'metadata'
+audio.crossOrigin = 'anonymous'
 
 const app = document.querySelector('#app')
 
@@ -39,6 +47,8 @@ function formatTime(sec) {
 }
 
 function mount() {
+  const bars = Array.from({ length: BAR_COUNT }, () => '<i></i>').join('')
+
   app.innerHTML = `
     <div class="page">
       <div class="wash" aria-hidden="true"></div>
@@ -58,10 +68,8 @@ function mount() {
       <main class="shell" id="listen">
         <section class="hero" aria-label="Now playing">
           <div class="cover" aria-hidden="true">
-            <span class="eq" data-eq>
-              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-            </span>
-            <span class="cover-title" data-cover-title>beat 1</span>
+            <span class="eq" data-eq>${bars}</span>
+            <span class="cover-title" data-cover-title>drift</span>
           </div>
 
           <div class="hero-copy">
@@ -117,12 +125,81 @@ function mount() {
   progressKnob = app.querySelector('[data-knob]')
   eqEl = app.querySelector('[data-eq]')
   coverTitle = app.querySelector('[data-cover-title]')
+  eqBars = [...eqEl.querySelectorAll('i')]
 
   bindShell()
   bindAudio()
   renderList()
+  resetEq()
 
   if (catalog[0]) selectBeat(catalog[0].id, { autoplay: false })
+}
+
+function ensureAudioGraph() {
+  if (audioGraphReady) {
+    if (audioCtx.state === 'suspended') return audioCtx.resume()
+    return Promise.resolve()
+  }
+
+  const Ctx = window.AudioContext || window.webkitAudioContext
+  audioCtx = new Ctx()
+  analyser = audioCtx.createAnalyser()
+  analyser.fftSize = 256
+  analyser.smoothingTimeConstant = 0.72
+  freqData = new Uint8Array(analyser.frequencyBinCount)
+
+  const source = audioCtx.createMediaElementSource(audio)
+  source.connect(analyser)
+  analyser.connect(audioCtx.destination)
+  audioGraphReady = true
+
+  return audioCtx.state === 'suspended' ? audioCtx.resume() : Promise.resolve()
+}
+
+function resetEq() {
+  eqBars.forEach((bar, i) => {
+    const idle = 8 + ((i * 7) % 10)
+    bar.style.height = `${idle}%`
+    bar.style.opacity = '0.28'
+  })
+}
+
+function drawEq() {
+  if (!analyser || !isPlaying) {
+    rafId = 0
+    return
+  }
+
+  analyser.getByteFrequencyData(freqData)
+
+  const usable = Math.floor(freqData.length * 0.55)
+  const step = Math.max(1, Math.floor(usable / BAR_COUNT))
+
+  for (let i = 0; i < BAR_COUNT; i += 1) {
+    let sum = 0
+    const start = i * step
+    for (let j = 0; j < step; j += 1) sum += freqData[start + j] || 0
+    const avg = sum / step
+    const boosted = Math.pow(avg / 255, 0.72)
+    const height = 8 + boosted * 86
+    const bar = eqBars[i]
+    bar.style.height = `${height}%`
+    bar.style.opacity = String(0.3 + boosted * 0.55)
+  }
+
+  rafId = requestAnimationFrame(drawEq)
+}
+
+function startEq() {
+  if (!rafId) rafId = requestAnimationFrame(drawEq)
+}
+
+function stopEq() {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = 0
+  }
+  resetEq()
 }
 
 function renderList() {
@@ -173,7 +250,16 @@ function selectBeat(id, { autoplay = true } = {}) {
 
   syncRowStates()
 
-  if (autoplay) audio.play().catch(() => {})
+  if (autoplay) playAudio()
+}
+
+async function playAudio() {
+  try {
+    await ensureAudioGraph()
+    await audio.play()
+  } catch {
+    // autoplay / gesture edge cases
+  }
 }
 
 function togglePlay() {
@@ -181,7 +267,7 @@ function togglePlay() {
     if (catalog[0]) selectBeat(catalog[0].id)
     return
   }
-  if (audio.paused) audio.play().catch(() => {})
+  if (audio.paused) playAudio()
   else audio.pause()
 }
 
@@ -199,7 +285,7 @@ function seekFromEvent(e) {
   const rect = progressEl.getBoundingClientRect()
   const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width)
   const pct = x / rect.width
-  if (Number.isFinite(audio.duration)) {
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
     audio.currentTime = pct * audio.duration
     updateProgress()
   }
@@ -210,16 +296,18 @@ function bindAudio() {
     isPlaying = true
     playBtn.classList.add('is-playing')
     playBtn.setAttribute('aria-label', 'Pause')
-    eqEl?.classList.add('is-on')
+    eqEl?.classList.add('is-live')
     syncRowStates()
+    startEq()
   })
 
   audio.addEventListener('pause', () => {
     isPlaying = false
     playBtn.classList.remove('is-playing')
     playBtn.setAttribute('aria-label', 'Play')
-    eqEl?.classList.remove('is-on')
+    eqEl?.classList.remove('is-live')
     syncRowStates()
+    stopEq()
   })
 
   audio.addEventListener('timeupdate', updateProgress)
@@ -245,24 +333,27 @@ function bindShell() {
 
   let dragging = false
 
+  const onSeek = (e) => seekFromEvent(e)
+
   progressEl.addEventListener('pointerdown', (e) => {
     dragging = true
+    progressEl.classList.add('is-dragging')
     progressEl.setPointerCapture(e.pointerId)
-    seekFromEvent(e)
+    onSeek(e)
   })
 
   progressEl.addEventListener('pointermove', (e) => {
     if (!dragging) return
-    seekFromEvent(e)
+    onSeek(e)
   })
 
-  progressEl.addEventListener('pointerup', () => {
+  const endDrag = () => {
     dragging = false
-  })
+    progressEl.classList.remove('is-dragging')
+  }
 
-  progressEl.addEventListener('pointercancel', () => {
-    dragging = false
-  })
+  progressEl.addEventListener('pointerup', endDrag)
+  progressEl.addEventListener('pointercancel', endDrag)
 }
 
 mount()

@@ -167,33 +167,25 @@ svg {
 .eq {
   display: flex;
   align-items: flex-end;
-  gap: 5px;
-  height: 3.2rem;
+  justify-content: center;
+  gap: 3px;
+  width: min(78%, 220px);
+  height: 42%;
   z-index: 1;
 }
 
 .eq i {
   display: block;
-  width: 5px;
-  height: 28%;
+  flex: 1 1 0;
+  min-width: 3px;
+  max-width: 7px;
+  height: 10%;
   border-radius: 99px;
   background: var(--ink);
   opacity: 0.28;
   transform-origin: bottom;
+  will-change: height, opacity;
 }
-
-.eq.is-on i {
-  opacity: 0.8;
-  animation: bounce 0.95s var(--ease-soft) infinite;
-}
-
-.eq.is-on i:nth-child(1) { animation-delay: 0s; height: 40%; }
-.eq.is-on i:nth-child(2) { animation-delay: 0.1s; height: 70%; }
-.eq.is-on i:nth-child(3) { animation-delay: 0.18s; height: 50%; }
-.eq.is-on i:nth-child(4) { animation-delay: 0.05s; height: 90%; }
-.eq.is-on i:nth-child(5) { animation-delay: 0.22s; height: 55%; }
-.eq.is-on i:nth-child(6) { animation-delay: 0.12s; height: 75%; }
-.eq.is-on i:nth-child(7) { animation-delay: 0.08s; height: 35%; }
 
 .cover-title {
   position: absolute;
@@ -325,8 +317,13 @@ svg {
 }
 
 .progress:hover .progress-knob,
-.progress:active .progress-knob {
+.progress:active .progress-knob,
+.progress.is-dragging .progress-knob {
   transform: translate(-50%, -50%) scale(1);
+}
+
+.progress.is-dragging .progress-track {
+  height: 7px;
 }
 
 .times {
@@ -482,8 +479,6 @@ svg {
   }
 }
 
-@keyframes bounce {
-  0%, 100% { transform: scaleY(0.4); }
   50% { transform: scaleY(1); }
 }
 
