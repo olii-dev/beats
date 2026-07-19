@@ -1,7 +1,7 @@
 import './style.css'
 
 const base = import.meta.env.BASE_URL
-const BAR_COUNT = 24
+const BAR_COUNT = 5
 
 const catalog = [
   {
@@ -181,10 +181,10 @@ function drawEq() {
     for (let j = 0; j < step; j += 1) sum += freqData[start + j] || 0
     const avg = sum / step
     const boosted = Math.pow(avg / 255, 0.72)
-    const height = 8 + boosted * 86
+    const height = 18 + boosted * 62
     const bar = eqBars[i]
     bar.style.height = `${height}%`
-    bar.style.opacity = String(0.3 + boosted * 0.55)
+    bar.style.opacity = String(0.35 + boosted * 0.4)
   }
 
   rafId = requestAnimationFrame(drawEq)

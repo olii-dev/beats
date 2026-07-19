@@ -168,23 +168,21 @@ svg {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 3px;
-  width: min(78%, 220px);
-  height: 42%;
+  gap: 10px;
+  height: 3.4rem;
   z-index: 1;
 }
 
 .eq i {
   display: block;
-  flex: 1 1 0;
-  min-width: 3px;
-  max-width: 7px;
-  height: 10%;
+  width: 7px;
+  height: 18%;
   border-radius: 99px;
   background: var(--ink);
   opacity: 0.28;
   transform-origin: bottom;
   will-change: height, opacity;
+  transition: height 0.08s linear, opacity 0.08s linear;
 }
 
 .cover-title {
