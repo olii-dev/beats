@@ -17,6 +17,7 @@ const tags = ['all', 'instrumental']
 let activeTag = 'all'
 let activeId = null
 let isPlaying = false
+let listAnimated = false
 
 const audio = new Audio()
 audio.preload = 'metadata'
@@ -32,6 +33,7 @@ let timeEl
 let progressEl
 let progressFill
 let progressKnob
+let eqEl
 
 function filtered() {
   return activeTag === 'all' ? catalog : catalog.filter((b) => b.tag === activeTag)
@@ -74,24 +76,30 @@ function mount() {
 
       <main class="main" id="tracks">
         <header class="top">
-          <h2 class="headline">now playing</h2>
+          <h2 class="headline">beats</h2>
         </header>
+
+        <div class="filters-wrap">
+          <div class="filters" role="tablist" aria-label="Filter beats"></div>
+        </div>
 
         <section class="player" aria-label="Player">
           <div class="player-card">
-            <div class="player-art" aria-hidden="true">
-              <span class="eq" data-eq>
-                <i></i><i></i><i></i><i></i><i></i>
-              </span>
+            <div class="player-top">
+              <div class="player-art" aria-hidden="true">
+                <span class="eq" data-eq>
+                  <i></i><i></i><i></i><i></i><i></i>
+                </span>
+              </div>
+              <div class="player-info">
+                <p class="player-title" data-title>select a beat</p>
+                <p class="player-tag" data-tag>—</p>
+              </div>
+              <button class="play-btn" data-play aria-label="Play" disabled>
+                <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+              </button>
             </div>
-            <div class="player-info">
-              <p class="player-title" data-title>select a beat</p>
-              <p class="player-tag" data-tag>—</p>
-            </div>
-            <button class="play-btn" data-play aria-label="Play" disabled>
-              <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-              <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
-            </button>
             <div class="progress" data-progress>
               <div class="progress-track">
                 <div class="progress-fill" data-fill></div>
@@ -101,10 +109,6 @@ function mount() {
             <p class="player-time" data-time>0:00 / 0:00</p>
           </div>
         </section>
-
-        <div class="filters-wrap">
-          <div class="filters" role="tablist" aria-label="Filter beats"></div>
-        </div>
 
         <div class="track-list"></div>
 
@@ -125,6 +129,7 @@ function mount() {
   progressEl = app.querySelector('[data-progress]')
   progressFill = app.querySelector('[data-fill]')
   progressKnob = app.querySelector('[data-knob]')
+  eqEl = app.querySelector('[data-eq]')
 
   bindShell()
   bindAudio()
@@ -151,13 +156,14 @@ function renderFilters() {
 
 function renderList() {
   const items = filtered()
+  const animate = !listAnimated
   listEl.innerHTML = items
     .map(
       (beat, i) => `
     <button
-      class="track ${activeId === beat.id ? 'is-active' : ''} ${activeId === beat.id && isPlaying ? 'is-playing' : ''}"
+      class="track ${animate ? 'will-rise' : ''} ${activeId === beat.id ? 'is-active' : ''} ${activeId === beat.id && isPlaying ? 'is-playing' : ''}"
       data-id="${beat.id}"
-      style="--d: ${Math.min(i * 40, 360)}ms"
+      style="--d: ${animate ? Math.min(i * 40, 360) : 0}ms"
     >
       <span class="track-index">${String(i + 1).padStart(2, '0')}</span>
       <span class="track-body">
@@ -172,6 +178,16 @@ function renderList() {
   `,
     )
     .join('')
+  listAnimated = true
+}
+
+function syncTrackStates() {
+  listEl.querySelectorAll('.track').forEach((el) => {
+    const id = Number(el.dataset.id)
+    const active = id === activeId
+    el.classList.toggle('is-active', active)
+    el.classList.toggle('is-playing', active && isPlaying)
+  })
 }
 
 function selectBeat(id, { autoplay = true } = {}) {
@@ -189,7 +205,7 @@ function selectBeat(id, { autoplay = true } = {}) {
     audio.load()
   }
 
-  renderList()
+  syncTrackStates()
 
   if (autoplay) {
     audio.play().catch(() => {})
@@ -232,16 +248,16 @@ function bindAudio() {
     isPlaying = true
     playBtn.classList.add('is-playing')
     playBtn.setAttribute('aria-label', 'Pause')
-    document.querySelector('[data-eq]')?.classList.add('is-on')
-    renderList()
+    eqEl?.classList.add('is-on')
+    syncTrackStates()
   })
 
   audio.addEventListener('pause', () => {
     isPlaying = false
     playBtn.classList.remove('is-playing')
     playBtn.setAttribute('aria-label', 'Play')
-    document.querySelector('[data-eq]')?.classList.remove('is-on')
-    renderList()
+    eqEl?.classList.remove('is-on')
+    syncTrackStates()
   })
 
   audio.addEventListener('timeupdate', updateProgress)
@@ -259,6 +275,7 @@ function bindShell() {
       const next = chip.dataset.tag
       if (next === activeTag) return
       activeTag = next
+      listAnimated = false
       renderFilters()
       renderList()
       return
