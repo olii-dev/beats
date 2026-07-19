@@ -12,9 +12,15 @@ const catalog = [
   },
   {
     id: 2,
-    title: 'haze',
-    tag: 'instrumental',
+    title: 'afterdark',
+    tag: 'phonk',
     src: `${base}beats/beat-2.m4a`,
+  },
+  {
+    id: 3,
+    title: 'window seat',
+    tag: 'lofi',
+    src: `${base}beats/beat-3.m4a`,
   },
 ]
 
