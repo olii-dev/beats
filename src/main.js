@@ -22,6 +22,12 @@ const catalog = [
     tag: 'lofi',
     src: `${base}beats/beat-3.m4a`,
   },
+  {
+    id: 4,
+    title: 'spacejunk',
+    tag: 'instrumental',
+    src: `${base}beats/beat-4.m4a`,
+  },
 ]
 
 let activeId = null
